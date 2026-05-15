@@ -3,6 +3,7 @@ import yfinance as yf
 import pandas as pd
 import numpy as np
 import plotly.graph_objects as go
+import os
 
 # ============================================
 # CONFIG
@@ -32,7 +33,10 @@ if stock.empty:
 # LOAD CPI
 # ============================================
 
-cpi = pd.read_csv("inflation_data/cpi.csv")
+# Use absolute path relative to this script
+current_dir = os.path.dirname(os.path.abspath(__file__))
+cpi_path = os.path.join(current_dir, "inflation_data/cpi.csv")
+cpi = pd.read_csv(cpi_path)
 
 cpi["Date"] = pd.to_datetime(cpi["Date"])
 cpi = cpi.set_index("Date")
