@@ -19,8 +19,16 @@ This application allows you to analyze stock prices adjusted for inflation using
    streamlit run app.py
    ```
 
+## Updating CPI Data
+To update the inflation data with the latest values from FRED (Federal Reserve Economic Data), run:
+```bash
+python update_cpi.py
+```
+This script will fetch the latest Consumer Price Index (CPI) and update `inflation_data/cpi.csv`.
+
 ## Project Structure
 - `app.py`: Main application script.
+- `update_cpi.py`: Utility script to update CPI data from FRED.
 - `inflation_data/cpi.csv`: Historical US CPI data.
 - `requirements.txt`: List of dependencies.
 - `README.md`: Project documentation.
