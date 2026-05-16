@@ -42,10 +42,10 @@ cpi["Date"] = pd.to_datetime(cpi["Date"])
 cpi = cpi.set_index("Date")
 
 # ============================================
-# RESAMPLE MONTHLY
+# RESAMPLE QUARTERLY
 # ============================================
 
-price = stock["Close"].resample("YS").last()
+price = stock["Close"].resample("QS").last()
 
 df = pd.DataFrame(price)
 df.columns = ["Price"]
