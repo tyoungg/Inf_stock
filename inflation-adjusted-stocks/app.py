@@ -27,6 +27,7 @@ cpi_path = os.path.join(current_dir, "inflation_data/cpi.csv")
 
 # Function to check for updates
 def check_for_updates():
+    # If file doesn't exist or was updated more than 24h ago
     if not os.path.exists(cpi_path):
         return True
 
@@ -35,15 +36,14 @@ def check_for_updates():
         return True
     return False
 
-# Automated check
+# Display Data Status
 if os.path.exists(cpi_path):
+    # Automated check
     if check_for_updates():
         with st.sidebar:
             with st.spinner("Automated Update: Fetching latest CPI..."):
                 success, msg = update_cpi()
 
-# Display Data Status
-if os.path.exists(cpi_path):
     cpi_df = pd.read_csv(cpi_path)
     latest_cpi_date = pd.to_datetime(cpi_df['Date']).max().strftime('%Y-%m')
     st.sidebar.info(f"Latest CPI Month: {latest_cpi_date}")
@@ -62,12 +62,7 @@ if st.sidebar.button("Refresh Inflation Data"):
             else:
                 st.error(msg)
 
-st.sidebar.divider()
-st.sidebar.header("Chart Settings")
-chart_type = st.sidebar.selectbox("Chart Type", ["Line", "Candlestick"])
-show_ohlc = st.sidebar.checkbox("Show Real OHLC", value=True) if chart_type == "Candlestick" else False
-
-ticker = st.sidebar.text_input("Stock Symbol", "MSFT")
+ticker = st.text_input("Stock Symbol", "MSFT")
 
 # ============================================
 # LOAD STOCK DATA
@@ -95,16 +90,10 @@ cpi = cpi.set_index("Date")
 # RESAMPLE MONTHLY
 # ============================================
 
-# Resample OHLC correctly
-resampled = stock.resample("MS").agg({
-    'Open': 'first',
-    'High': 'max',
-    'Low': 'min',
-    'Close': 'last',
-    'Volume': 'sum'
-})
+price = stock["Close"].resample("MS").last()
 
-df = pd.DataFrame(resampled)
+df = pd.DataFrame(price)
+df.columns = ["Price"]
 
 df = df.merge(cpi, left_index=True,
               right_index=True,
@@ -119,8 +108,6 @@ df = df.dropna(subset=["CPI"])
 # ============================================
 # CALCULATIONS
 # ============================================
-
-df["Price"] = df["Close"]
 
 df["Nominal_Return"] = (
     df["Price"].pct_change()
@@ -137,13 +124,10 @@ df["Real_Return"] = (
 
 base_cpi = df["CPI"].iloc[0]
 
-# Real prices for all OHLC components
-for col in ["Open", "High", "Low", "Close"]:
-    df[f"Real_{col}"] = (
-        df[col] * (base_cpi / df["CPI"])
-    )
-
-df["Real_Price"] = df["Real_Close"]
+df["Real_Price"] = (
+    df["Price"] *
+    (base_cpi / df["CPI"])
+)
 
 df["Inflation_Dependence"] = (
     df["Inflation_Rate"] /
@@ -151,71 +135,35 @@ df["Inflation_Dependence"] = (
 )
 
 # ============================================
-# CHART 1: Main Price Chart
+# CHART 1
 # ============================================
 
 fig1 = go.Figure()
 
-if chart_type == "Line":
-    fig1.add_trace(
-        go.Scatter(
-            x=df.index,
-            y=df["Price"],
-            name="Nominal Price"
-        )
+fig1.add_trace(
+    go.Scatter(
+        x=df.index,
+        y=df["Price"],
+        name="Nominal Price"
     )
-    fig1.add_trace(
-        go.Scatter(
-            x=df.index,
-            y=df["Real_Price"],
-            name="Inflation Adjusted Price"
-        )
-    )
-else:
-    # Candlestick
-    fig1.add_trace(
-        go.Candlestick(
-            x=df.index,
-            open=df["Open"],
-            high=df["High"],
-            low=df["Low"],
-            close=df["Close"],
-            name="Nominal OHLC",
-            visible="legendonly" if show_ohlc else True
-        )
-    )
+)
 
-    if show_ohlc:
-        fig1.add_trace(
-            go.Candlestick(
-                x=df.index,
-                open=df["Real_Open"],
-                high=df["Real_High"],
-                low=df["Real_Low"],
-                close=df["Real_Close"],
-                name="Real OHLC"
-            )
-        )
-    else:
-         fig1.add_trace(
-            go.Scatter(
-                x=df.index,
-                y=df["Real_Price"],
-                name="Real Price (Line)",
-                line=dict(color='cyan', width=2)
-            )
-        )
+fig1.add_trace(
+    go.Scatter(
+        x=df.index,
+        y=df["Real_Price"],
+        name="Inflation Adjusted Price"
+    )
+)
 
 fig1.update_layout(
-    title=f"{ticker} Nominal vs Real Price ({chart_type})",
-    xaxis_rangeslider_visible=False,
-    height=600
+    title=f"{ticker} Nominal vs Real Price"
 )
 
 st.plotly_chart(fig1, use_container_width=True)
 
 # ============================================
-# CHART 2: Returns
+# CHART 2
 # ============================================
 
 fig2 = go.Figure()
@@ -243,7 +191,7 @@ fig2.update_layout(
 st.plotly_chart(fig2, use_container_width=True)
 
 # ============================================
-# CHART 3: Inflation Dependence
+# CHART 3
 # ============================================
 
 fig3 = go.Figure()

@@ -26,7 +26,7 @@ jobs:
           script: |
             const owner = context.repo.owner;
             const repo = context.repo.repo;
-
+            
             // Get inputs from workflow_dispatch or use defaults
             const retainDays = parseInt(context.payload.inputs?.retainDays || '2');
             const keepMinimumRuns = parseInt(context.payload.inputs?.keepMinimumRuns || '10');
@@ -41,7 +41,7 @@ jobs:
               owner,
               repo
             });
-
+            
             console.log(`Total runs found in repo: ${allRuns.length}`);
 
             // 2. Group runs by workflow_id
@@ -57,10 +57,10 @@ jobs:
             // 3. Process each workflow's runs
             for (const workflowId in runsByWorkflow) {
               const runs = runsByWorkflow[workflowId];
-
+              
               // Sort runs by created_at descending (newest first)
               runs.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
-
+              
               // Identify runs to delete:
               // - Must be older than cutoffDate
               // - Must NOT be among the first keepMinimumRuns (newest runs)
