@@ -10,8 +10,6 @@ def update_cpi():
     Returns:
         tuple: (success (bool), message (str))
     """
-    print("Updating CPI data from FRED...")
-
     # FRED URL for CPIAUCSNS (Consumer Price Index for All Urban Consumers: All Items in U.S. City Average, Not Seasonally Adjusted)
     url = "https://fred.stlouisfed.org/graph/fredgraph.csv?id=CPIAUCSNS"
 
@@ -21,10 +19,11 @@ def update_cpi():
     }
 
     try:
-        response = requests.get(url, headers=headers, timeout=15)
+        # Use a short timeout for automated checks
+        response = requests.get(url, headers=headers, timeout=5)
 
         if response.status_code != 200:
-            return False, f"Failed to fetch from FRED (Status {response.status_code})"
+            return False, f"FRED returned status {response.status_code}"
 
         # Load the data into a DataFrame
         new_data = pd.read_csv(StringIO(response.text))
@@ -52,10 +51,12 @@ def update_cpi():
 
         # Save back to CSV
         final_df.to_csv(csv_path, index=False)
-        return True, f"Updated successfully. Latest date: {final_df['Date'].iloc[-1]}"
+        return True, f"Updated. Latest: {final_df['Date'].iloc[-1]}"
 
+    except requests.exceptions.Timeout:
+        return False, "Connection timeout (FRED is slow)"
     except Exception as e:
-        return False, f"Error: {str(e)}"
+        return False, str(e)
 
 if __name__ == "__main__":
     success, msg = update_cpi()
