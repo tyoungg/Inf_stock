@@ -4,14 +4,63 @@ import pandas as pd
 import numpy as np
 import plotly.graph_objects as go
 import os
+import time
+from update_cpi import update_cpi
+import datetime
 
 # ============================================
 # CONFIG
 # ============================================
 
-st.set_page_config(layout="wide")
+st.set_page_config(layout="wide", page_title="Inflation Adjusted Stocks")
 
 st.title("Inflation Adjusted Stock Analysis")
+
+# ============================================
+# DATA MANAGEMENT (SIDEBAR)
+# ============================================
+
+st.sidebar.header("Data Management")
+
+current_dir = os.path.dirname(os.path.abspath(__file__))
+cpi_path = os.path.join(current_dir, "inflation_data/cpi.csv")
+
+# Function to check for updates
+def check_for_updates():
+    # If file doesn't exist or was updated more than 24h ago
+    if not os.path.exists(cpi_path):
+        return True
+
+    last_modified = os.path.getmtime(cpi_path)
+    if (time.time() - last_modified) > 86400: # 24 hours
+        return True
+    return False
+
+# Display Data Status
+if os.path.exists(cpi_path):
+    # Automated check
+    if check_for_updates():
+        with st.sidebar:
+            with st.spinner("Automated Update: Fetching latest CPI..."):
+                success, msg = update_cpi()
+
+    cpi_df = pd.read_csv(cpi_path)
+    latest_cpi_date = pd.to_datetime(cpi_df['Date']).max().strftime('%Y-%m')
+    st.sidebar.info(f"Latest CPI Month: {latest_cpi_date}")
+
+    last_update = datetime.datetime.fromtimestamp(os.path.getmtime(cpi_path))
+    st.sidebar.text(f"Last sync: {last_update.strftime('%Y-%m-%d %H:%M')}")
+
+# Manual Refresh Button
+if st.sidebar.button("Refresh Inflation Data"):
+    with st.sidebar:
+        with st.spinner("Updating CPI from FRED..."):
+            success, msg = update_cpi()
+            if success:
+                st.success(msg)
+                st.rerun()
+            else:
+                st.error(msg)
 
 ticker = st.text_input("Stock Symbol", "MSFT")
 
@@ -33,11 +82,7 @@ if stock.empty:
 # LOAD CPI
 # ============================================
 
-# Use absolute path relative to this script
-current_dir = os.path.dirname(os.path.abspath(__file__))
-cpi_path = os.path.join(current_dir, "inflation_data/cpi.csv")
 cpi = pd.read_csv(cpi_path)
-
 cpi["Date"] = pd.to_datetime(cpi["Date"])
 cpi = cpi.set_index("Date")
 
