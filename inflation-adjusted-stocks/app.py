@@ -42,17 +42,23 @@ cpi["Date"] = pd.to_datetime(cpi["Date"])
 cpi = cpi.set_index("Date")
 
 # ============================================
-# RESAMPLE QUARTERLY
+# RESAMPLE MONTHLY
 # ============================================
 
-price = stock["Close"].resample("QS").last()
+price = stock["Close"].resample("MS").last()
 
 df = pd.DataFrame(price)
 df.columns = ["Price"]
 
 df = df.merge(cpi, left_index=True,
               right_index=True,
-              how="inner")
+              how="left")
+
+# Forward fill CPI in case stock data is newer than latest CPI report
+df["CPI"] = df["CPI"].ffill()
+
+# Drop rows where CPI is still NaN (before our first CPI data point)
+df = df.dropna(subset=["CPI"])
 
 # ============================================
 # CALCULATIONS

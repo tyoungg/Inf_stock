@@ -45,16 +45,11 @@ def update_cpi():
         else:
             existing_df = pd.DataFrame(columns=['Date', 'CPI'])
 
-        # Filter for quarterly data (Jan 1, Apr 1, Jul 1, Oct 1)
-        # FRED data points are usually on the 1st of the month
-        filtered_new = new_data[new_data['Date'].dt.month.isin([1, 4, 7, 10])].copy()
-
-        # Always include the absolute latest available data point too
-        latest_datapoint = new_data.iloc[[-1]].copy()
-        combined_new = pd.concat([filtered_new, latest_datapoint]).drop_duplicates(subset=['Date'])
+        # Keep all available monthly data for higher resolution
+        new_monthly = new_data.copy()
 
         # Merge with existing
-        final_df = pd.concat([existing_df, combined_new]).drop_duplicates(subset=['Date'], keep='last')
+        final_df = pd.concat([existing_df, new_monthly]).drop_duplicates(subset=['Date'], keep='last')
         final_df = final_df.sort_values('Date')
 
         # Formatting for CSV
